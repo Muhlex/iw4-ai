@@ -1,3 +1,5 @@
-Navmesh__New(startOrigin) {
+#include lib;
+
+Navmesh_New(startOrigin) {
 
 }

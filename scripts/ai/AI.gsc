@@ -1,5 +1,4 @@
-#include scripts\util;
-#include scripts\util\Debug;
+#include lib;
 
 CAPSULE_HALF_HEIGHT = 36;
 CAPSULE_RADIUS = 16;
@@ -7,15 +6,43 @@ MOVE_SPEED = 6;
 STEP_HEIGHT = 24;
 MAX_INCLINE = 0.8;
 
-AI__New(origin) {
+AI_Spawn(origin) {
 	ai = spawn("script_origin", origin);
 	// ai setModel("test_sphere_silver");
-	ai thread _AI_Think();
+	ai thread _Think();
 	return ai;
 }
 
-AI_Kill() {
+Kill() {
 	self delete();
+}
+
+HandleMovement(movementVec) {
+	if (lengthSquared(movementVec) == 0) return;
+
+	self.origin = simulateMovement(self.origin, movementVec, MOVE_SPEED, STEP_HEIGHT);
+}
+
+_Think() {
+	self endon ("death");
+
+	for (;;) {
+		lib\debug::text3D(
+			self.origin + (0, 0, CAPSULE_HALF_HEIGHT * 2),
+			"| AI Actor",
+			(0.5, 1, 0.5),
+			1,
+			0.25
+		);
+		lib\debug::capsule3D(
+			self.origin + (0, 0, CAPSULE_HALF_HEIGHT),
+			CAPSULE_HALF_HEIGHT,
+			CAPSULE_RADIUS,
+			(0.5, 1, 0.5)
+		);
+
+		wait 0.05;
+	}
 }
 
 simulateMovement(from, normalizedMovement, speed, stepHeight) {
@@ -51,32 +78,4 @@ getStepOrigin(from, velocity, stepHeight) {
 
 getIncline(from, to) {
 	return vectorDot(vectorNormalize(to - from), (0, 0, 1));
-}
-
-AI_HandleMovement(movementVec) {
-	if (lengthSquared(movementVec) == 0) return;
-
-	self.origin = simulateMovement(self.origin, movementVec, MOVE_SPEED, STEP_HEIGHT);
-}
-
-_AI_Think() {
-	self endon ("death");
-
-	for (;;) {
-		Debug__Text3D(
-			self.origin + (0, 0, CAPSULE_HALF_HEIGHT * 2),
-			"| AI Actor",
-			(0.5, 1, 0.5),
-			1,
-			0.25
-		);
-		Debug__Capsule3D(
-			self.origin + (0, 0, CAPSULE_HALF_HEIGHT),
-			CAPSULE_HALF_HEIGHT,
-			CAPSULE_RADIUS,
-			(0.5, 1, 0.5)
-		);
-
-		wait 0.05;
-	}
 }

@@ -1,7 +1,6 @@
-#include scripts\util;
-#include scripts\util\Math;
+#include lib;
 
-Debug__Text3D(pos, text, color, alpha, scale, duration, sync) {
+text3D(pos, text, color, alpha, scale, duration, sync) {
 	color = coalesce(color, (1, 1, 1));
 	alpha = coalesce(alpha, 1.0);
 	scale = coalesce(scale, 1.0);
@@ -14,11 +13,11 @@ Debug__Text3D(pos, text, color, alpha, scale, duration, sync) {
 			wait 0.05;
 		}
 	} else {
-		thread Debug__Text3D(pos, text, color, alpha, scale, duration, true);
+		thread text3D(pos, text, color, alpha, scale, duration, true);
 	}
 }
 
-Debug__Line3D(start, end, color, duration, sync) {
+line3D(start, end, color, duration, sync) {
 	color = coalesce(color, (1, 1, 1));
 	duration = coalesce(duration, 0.05);
 	sync = coalesce(sync, false);
@@ -29,18 +28,18 @@ Debug__Line3D(start, end, color, duration, sync) {
 			wait 0.05;
 		}
 	} else {
-		thread Debug__Line3D(start, end, color, duration, true);
+		thread line3D(start, end, color, duration, true);
 	}
 }
 
-Debug__Point3D(pos, color, duration) {
-	Debug__Line3D((pos[0] + 1, pos[1] + 1, pos[2] + 1), (pos[0] - 1, pos[1] - 1, pos[2] - 1), color, duration);
-	Debug__Line3D((pos[0] - 1, pos[1] + 1, pos[2] + 1), (pos[0] + 1, pos[1] - 1, pos[2] - 1), color, duration);
-	Debug__Line3D((pos[0] + 1, pos[1] - 1, pos[2] + 1), (pos[0] - 1, pos[1] + 1, pos[2] - 1), color, duration);
-	Debug__Line3D((pos[0] - 1, pos[1] - 1, pos[2] + 1), (pos[0] + 1, pos[1] + 1, pos[2] - 1), color, duration);
+point3D(pos, color, duration) {
+	line3D((pos[0] + 1, pos[1] + 1, pos[2] + 1), (pos[0] - 1, pos[1] - 1, pos[2] - 1), color, duration);
+	line3D((pos[0] - 1, pos[1] + 1, pos[2] + 1), (pos[0] + 1, pos[1] - 1, pos[2] - 1), color, duration);
+	line3D((pos[0] + 1, pos[1] - 1, pos[2] + 1), (pos[0] - 1, pos[1] + 1, pos[2] - 1), color, duration);
+	line3D((pos[0] - 1, pos[1] - 1, pos[2] + 1), (pos[0] + 1, pos[1] + 1, pos[2] - 1), color, duration);
 }
 
-Debug__Box3D(mins, maxs, color, duration) {
+box3D(mins, maxs, color, duration) {
 	vertices = [];
 	vertices[0] = (mins[0], mins[1], mins[2]);
 	vertices[1] = (maxs[0], mins[1], mins[2]);
@@ -66,14 +65,14 @@ Debug__Box3D(mins, maxs, color, duration) {
 	}
 
 	for (i = 0; i < edges.size; i++)
-		Debug__Line3D(vertices[edges[i][0]], vertices[edges[i][1]], color, duration);
+		line3D(vertices[edges[i][0]], vertices[edges[i][1]], color, duration);
 }
 
-Debug__Arc3D(pos, radius, startAngle, arcAngle, axis, color, duration) {
+arc3D(pos, radius, startAngle, arcAngle, axis, color, duration) {
 	startAngle = coalesce(startAngle, 0);
 	arcAngle = coalesce(arcAngle, 360);
 	axis = coalesce(axis, "z");
-	segments = ceil(arcAngle / clamp(Math__Remap(radius, 16, 8192, 22.5, 12), 22.5, 22));
+	segments = ceil(arcAngle / clamp(lib\Math::remap(radius, 16, 8192, 22.5, 12), 22.5, 22));
 
 	for (i = 0; i < segments; i++) {
 		angle = startAngle + arcAngle * i / segments;
@@ -102,24 +101,24 @@ Debug__Arc3D(pos, radius, startAngle, arcAngle, axis, color, duration) {
 				break;
 		}
 
-		Debug__Line3D(pos + startOffset, pos + endOffset, color, duration);
+		line3D(pos + startOffset, pos + endOffset, color, duration);
 	}
 }
 
-Debug__Capsule3D(pos, halfHeight, radius, color, duration) {
+capsule3D(pos, halfHeight, radius, color, duration) {
 	topCenter = pos + (0, 0, halfHeight - radius);
 	bottomCenter = pos - (0, 0, halfHeight - radius);
 
-	Debug__Line3D(topCenter + (radius, 0, 0), bottomCenter + (radius, 0, 0), color, duration);
-	Debug__Line3D(topCenter + (0, radius, 0), bottomCenter + (0, radius, 0), color, duration);
-	Debug__Line3D(topCenter - (radius, 0, 0), bottomCenter - (radius, 0, 0), color, duration);
-	Debug__Line3D(topCenter - (0, radius, 0), bottomCenter - (0, radius, 0), color, duration);
+	line3D(topCenter + (radius, 0, 0), bottomCenter + (radius, 0, 0), color, duration);
+	line3D(topCenter + (0, radius, 0), bottomCenter + (0, radius, 0), color, duration);
+	line3D(topCenter - (radius, 0, 0), bottomCenter - (radius, 0, 0), color, duration);
+	line3D(topCenter - (0, radius, 0), bottomCenter - (0, radius, 0), color, duration);
 
-	Debug__Arc3D(topCenter, radius, 0, 360, "z", color, duration);
-	Debug__Arc3D(topCenter, radius, 0, 180, "x", color, duration);
-	Debug__Arc3D(topCenter, radius, 0, 180, "y", color, duration);
+	arc3D(topCenter, radius, 0, 360, "z", color, duration);
+	arc3D(topCenter, radius, 0, 180, "x", color, duration);
+	arc3D(topCenter, radius, 0, 180, "y", color, duration);
 
-	Debug__Arc3D(bottomCenter, radius, 0, 360, "z", color, duration);
-	Debug__Arc3D(bottomCenter, radius, 180, 180, "x", color, duration);
-	Debug__Arc3D(bottomCenter, radius, 180, 180, "y", color, duration);
+	arc3D(bottomCenter, radius, 0, 360, "z", color, duration);
+	arc3D(bottomCenter, radius, 180, 180, "x", color, duration);
+	arc3D(bottomCenter, radius, 180, 180, "y", color, duration);
 }

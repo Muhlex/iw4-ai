@@ -1,6 +1,4 @@
-#include scripts\util;
-
-Array__IsMap(array) {
+isMap(array) {
 	foreach (key in getArrayKeys(array))
 		if (isString(key))
 			return true;
@@ -8,9 +6,9 @@ Array__IsMap(array) {
 	return false;
 }
 
-Array__ToString(array) {
-	isMap = Array__IsMap(array);
-	str = ternary(isMap, "{", "[");
+toString(array) {
+	isMap = isMap(array);
+	str = lib::ternary(isMap, "{", "[");
 	foreach (key, value in array) {
 		if (isMap)
 			str += key + ": " + value + ", ";
@@ -19,7 +17,7 @@ Array__ToString(array) {
 	}
 	if (array.size > 0)
 		str = getSubStr(str, 0, str.size - 2);
-	str += ternary(isMap, "}", "]");
+	str += lib::ternary(isMap, "}", "]");
 
 	return str;
 }
