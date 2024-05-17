@@ -1,0 +1,3 @@
+Navmesh__New(startOrigin) {
+
+}
