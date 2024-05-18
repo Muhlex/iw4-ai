@@ -19,11 +19,11 @@ OnPlayerSaid() {
 		switch (text) {
 			case "spawn":
 			case "s":
-				level.ais[level.ais.size] = scripts\ai\AI::AI_Spawn(player.origin);
+				level.ais[level.ais.size] = scripts\ai\AI::Spawn(player.origin);
 				break;
 			case "kill":
 			case "k":
-				foreach (ai in level.ais) ai scripts\ai\AI::Kill();
+				foreach (ai in level.ais) ai scripts\ai\AI::kill();
 				level.ais = [];
 				break;
 			case "control":
@@ -45,7 +45,7 @@ OnPlayerSaid() {
 				break;
 			case "generate":
 			case "g":
-				thread scripts\ai\Navmesh::Navmesh_New(player.origin);
+				thread scripts\ai\Navmesh::Generate(player.origin);
 		}
 	}
 }
@@ -72,7 +72,7 @@ OnPlayerControlThink() {
 			aiMoveVec = anglesToForward(moveAngle);
 		}
 		foreach (ai in level.ais)
-			ai scripts\ai\AI::HandleMovement(aiMoveVec);
+			ai scripts\ai\AI::handleMovement(aiMoveVec);
 
 		wait 0.05;
 	}

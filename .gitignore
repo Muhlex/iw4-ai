@@ -3,4 +3,6 @@
 !.gitignore
 !scripts/
 !lib/
-!util.gsc
+!lib.gsc
+
+!Set.gsc
