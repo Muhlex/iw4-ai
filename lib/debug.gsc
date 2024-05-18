@@ -1,11 +1,9 @@
-#include lib;
-
 text3D(pos, text, color, alpha, scale, duration, sync) {
-	color = coalesce(color, (1, 1, 1));
-	alpha = coalesce(alpha, 1.0);
-	scale = coalesce(scale, 1.0);
-	duration = coalesce(duration, 0.05);
-	sync = coalesce(sync, false);
+	color = lib::coalesce(color, (1, 1, 1));
+	alpha = lib::coalesce(alpha, 1.0);
+	scale = lib::coalesce(scale, 1.0);
+	duration = lib::coalesce(duration, 0.05);
+	sync = lib::coalesce(sync, false);
 
 	if (sync) {
 		for (i = 0; i < duration * 20; i++) {
@@ -18,9 +16,9 @@ text3D(pos, text, color, alpha, scale, duration, sync) {
 }
 
 line3D(start, end, color, duration, sync) {
-	color = coalesce(color, (1, 1, 1));
-	duration = coalesce(duration, 0.05);
-	sync = coalesce(sync, false);
+	color = lib::coalesce(color, (1, 1, 1));
+	duration = lib::coalesce(duration, 0.05);
+	sync = lib::coalesce(sync, false);
 
 	if (sync) {
 		for (i = 0; i < duration * 20; i++) {
@@ -69,9 +67,9 @@ box3D(mins, maxs, color, duration) {
 }
 
 arc3D(pos, radius, startAngle, arcAngle, axis, color, duration) {
-	startAngle = coalesce(startAngle, 0);
-	arcAngle = coalesce(arcAngle, 360);
-	axis = coalesce(axis, "z");
+	startAngle = lib::coalesce(startAngle, 0);
+	arcAngle = lib::coalesce(arcAngle, 360);
+	axis = lib::coalesce(axis, "z");
 	segments = ceil(arcAngle / clamp(lib\Math::remap(radius, 16, 8192, 22.5, 12), 22.5, 22));
 
 	for (i = 0; i < segments; i++) {

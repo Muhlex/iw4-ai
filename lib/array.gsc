@@ -1,3 +1,13 @@
+pack(array) {
+	packed = spawnStruct();
+	packed.value = array;
+	return packed;
+}
+
+unpack(packedArray) {
+	return packedArray.value;
+}
+
 isMap(array) {
 	foreach (key in getArrayKeys(array))
 		if (isString(key))

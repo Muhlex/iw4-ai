@@ -20,7 +20,7 @@ Kill() {
 HandleMovement(movementVec) {
 	if (lengthSquared(movementVec) == 0) return;
 
-	self.origin = simulateMovement(self.origin, movementVec, MOVE_SPEED, STEP_HEIGHT);
+	self.origin = simulateMovement(self.origin, movementVec * MOVE_SPEED);
 }
 
 _Think() {
@@ -45,11 +45,14 @@ _Think() {
 	}
 }
 
-simulateMovement(from, normalizedMovement, speed, stepHeight) {
+simulateMovement(from, movement) {
+	speed = length(movement);
+	normalizedMovement = movement / speed;
 	to = from;
+
 	for (currentSpeed = speed; currentSpeed > 0.1; currentSpeed -= speed / 4) {
-		targetOrigin = getStepOrigin(from, normalizedMovement * currentSpeed, stepHeight);
-		if (from[2] - targetOrigin[2] > stepHeight) continue; // no falling
+		targetOrigin = getStepOrigin(from, normalizedMovement * currentSpeed, STEP_HEIGHT);
+		if (from[2] - targetOrigin[2] > STEP_HEIGHT) continue; // no falling
 		stepIncline = getIncline(from, targetOrigin);
 		if (abs(stepIncline) > MAX_INCLINE) {
 			targetIncline = getIncline(
