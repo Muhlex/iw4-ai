@@ -2,6 +2,7 @@
 
 New() {
 	set = spawnStruct();
+	set._classname = "Set";
 	set._array = [];
 	return set;
 }
@@ -16,6 +17,10 @@ add(value) {
 
 remove(value) {
 	self._array[value] = undefined;
+}
+
+size() {
+	return self._array.size;
 }
 
 toArray() {

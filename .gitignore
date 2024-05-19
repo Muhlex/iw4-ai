@@ -1,8 +1,6 @@
 /*
-
 !.gitignore
+
+!*.gsc
 !scripts/
 !lib/
-!lib.gsc
-
-!Set.gsc

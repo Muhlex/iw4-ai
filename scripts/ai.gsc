@@ -1,5 +1,6 @@
 init() {
 	level.ais = [];
+	level.navmesh = AI_Navmesh::New();
 
 	level thread OnPlayerConnect();
 }
@@ -7,6 +8,7 @@ init() {
 OnPlayerConnect() {
 	for (;;) {
 		level waittill ("connected", player);
+
 		player thread OnPlayerSaid();
 		player thread OnPlayerSpawned();
 	}
@@ -19,11 +21,11 @@ OnPlayerSaid() {
 		switch (text) {
 			case "spawn":
 			case "s":
-				level.ais[level.ais.size] = scripts\ai\AI::Spawn(player.origin);
+				level.ais[level.ais.size] = AI_Actor::Spawn(player.origin);
 				break;
 			case "kill":
 			case "k":
-				foreach (ai in level.ais) ai scripts\ai\AI::kill();
+				foreach (ai in level.ais) ai AI_Actor::kill();
 				level.ais = [];
 				break;
 			case "control":
@@ -45,7 +47,17 @@ OnPlayerSaid() {
 				break;
 			case "generate":
 			case "g":
-				thread scripts\ai\Navmesh::Generate(player.origin);
+				origins = [];
+				origins[0] = player.origin;
+				level.navmesh thread AI_Navmesh::generate(origins);
+				break;
+			case "generatespawns":
+			case "gs":
+				spawnPoints = maps\mp\gametypes\_spawnlogic::getSpawnpointArray("mp_dm_spawn");
+				origins = [];
+				foreach (spawnPoint in spawnPoints) origins[origins.size] = spawnPoint.origin;
+				level.navmesh thread AI_Navmesh::generate(origins);
+				break;
 		}
 	}
 }
@@ -56,6 +68,7 @@ OnPlayerSpawned() {
 	for (;;) {
 		self waittill ("spawned_player");
 		self thread OnPlayerControlThink();
+		self thread OnPlayerDebug4();
 	}
 }
 
@@ -72,8 +85,32 @@ OnPlayerControlThink() {
 			aiMoveVec = anglesToForward(moveAngle);
 		}
 		foreach (ai in level.ais)
-			ai scripts\ai\AI::handleMovement(aiMoveVec);
+			ai AI_Actor::handleMovement(aiMoveVec);
 
+		wait 0.05;
+	}
+}
+
+OnPlayerDebug4() {
+	self endon ("disconnect");
+	self endon ("death");
+
+	self notifyOnPlayerCommand("+debug 4", "+actionslot 4");
+	self notifyOnPlayerCommand("-debug 4", "-actionslot 4");
+
+	for (;;) {
+		self waittill ("+debug 4");
+		self OnPlayerDrawNavmesh();
+	}
+}
+
+OnPlayerDrawNavmesh() {
+	self endon ("disconnect");
+	self endon ("death");
+	self endon ("-debug 4");
+
+	for (;;) {
+		level.navmesh AI_Navmesh::draw();
 		wait 0.05;
 	}
 }
