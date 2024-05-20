@@ -6,72 +6,76 @@ PLAYER_CAPSULE_HEIGHT = 72;
 RESOLUTION = 96;
 
 SQRT_OF_TWO = 1.4143;
-MIN_DISTANCE = RESOLUTION / 2 * SQRT_OF_TWO;
-MAX_DISTANCE = RESOLUTION * 2 - 1;
+MIN_WAYPOINT_DISTANCE = RESOLUTION / 2 * SQRT_OF_TWO;
+MAX_CONNECT_DISTANCE = RESOLUTION + MIN_WAYPOINT_DISTANCE;
 
 New() {
 	mesh = spawnStruct();
-	mesh._edges = List::New();
 	mesh._chunks = Map::New();
 	mesh.length = 0;
 	return mesh;
 }
 
 generate(startOrigins) {
-	iPrintLnBold("Generating navmesh... (previous waypoint count: ", self.length, ")");
-
 	resolutionSq = squared(RESOLUTION);
-	minDistHorizSq = squared(MIN_DISTANCE);
-	maxDistHorizSq = squared(MAX_DISTANCE);
-	maxDistVert = PLAYER_CAPSULE_HEIGHT;
+	minWaypointDistSq = squared(MIN_WAYPOINT_DISTANCE);
+	maxConnectDistSq = squared(MAX_CONNECT_DISTANCE);
 	queue = Queue::New();
 
-	printLn("in generate");
 	foreach (origin in startOrigins) {
 		groundedOrigin = playerPhysicsTrace(origin, origin + (0, 0, -4096));
 		queue Queue::enqueue(groundedOrigin);
 	}
 
+	iterations = 0;
+	previousLength = self.length;
+
 	while (queue Queue::size() > 0) {
 		origin = queue Queue::dequeue();
 		waypoint = AI_Waypoint::New(self.length, origin);
-		valid = self AI_Navmesh::_addWaypoint(waypoint, minDistHorizSq, maxDistHorizSq, maxDistVert);
+		valid = self AI_Navmesh::_addWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq);
 		if (!valid) continue;
 
 		for (angle = 0; angle < 360; angle += 90) {
 			movement = anglesToForward((0, angle, 0)) * RESOLUTION;
-			movedOrigin = scripts\ai\movement::simulateStep(waypoint.origin, movement);
+			movedOrigin = scripts\ai\movement::simulateMovement(origin, movement);
 
-			// if (distanceSquared(waypoint.origin, movedOrigin) < minDistHorizSq) continue; // opt, only do it horiz?
+			if (distanceSquared(origin, movedOrigin) < minWaypointDistSq) continue; // optimization
 
 			queue Queue::enqueue(movedOrigin);
 		}
 
-		if (getDvarInt("ai_navmesh_debug") != 0) wait 0.05;
+		iterations++;
+		if (getDvarInt("ai_navmesh_debug") != 0 && iterations % 16 == 0) wait 0.05;
+	}
+
+	iPrintLnBold("Generated ", self.length - previousLength, " nodes.");
+}
+
+draw(origin, chunkRange) {
+	waypoints = self _getChunkWaypoints(origin, chunkRange);
+	drawnIds = Set::New();
+	foreach (waypoint in waypoints.array) {
+		if (waypoint.children List::size() == 0)
+			lib\debug::line3D(waypoint.origin, waypoint.origin + (0, 0, 16), (1, 1, 1));
+		foreach (childId in waypoint.children Map::keys().array) {
+			if (drawnIds Set::has(childId)) continue;
+			childWaypoint = waypoint.children Map::get(childId);
+			lib\debug::line3D(waypoint.origin, childWaypoint.origin, (0, 0.85, 1));
+		}
+		drawnIds Set::add(waypoint.id);
 	}
 }
 
-draw() {
-	foreach (edge in self._edges.array) {
-		lib\debug::line3D(edge[0].origin, edge[1].origin, (0, 0.85, 1.0));
-	}
-}
-
-_addWaypoint(newWaypoint, minDistHorizSq, maxDistHorizSq, maxDistVert) {
+_addWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
 	waypointsInRange = List::New();
-	searchWaypoints = self AI_Navmesh::_getSearchWaypoints(newWaypoint.origin);
-	// iPrintLn("Checking ", searchWaypoints List::size(), " waypoints while total is ", self.length, ".");
+	searchWaypoints = self AI_Navmesh::_getChunkWaypoints(newWaypoint.origin, 1);
 
 	// Check validity:
 	foreach (waypoint in searchWaypoints.array) {
-		distanceVert = abs(waypoint.origin[2] - newWaypoint.origin[2]);
-		if (distanceVert > maxDistVert) continue;
-		distanceHorizSq = distanceSquared(
-			(waypoint.origin[0], waypoint.origin[1], 0),
-			(newWaypoint.origin[0], newWaypoint.origin[1], 0)
-		);
-		if (distanceHorizSq > maxDistHorizSq) continue;
-		if (distanceHorizSq < minDistHorizSq) return false;
+		distanceHorizSq = distanceSquared(waypoint.origin, newWaypoint.origin);
+		if (distanceHorizSq > maxConnectDistSq) continue;
+		if (distanceHorizSq < minWaypointDistSq) return false;
 		waypointsInRange List::push(waypoint);
 	}
 
@@ -84,20 +88,15 @@ _addWaypoint(newWaypoint, minDistHorizSq, maxDistHorizSq, maxDistVert) {
 	// Connect to reachable waypoints:
 	foreach (waypoint in waypointsInRange.array) {
 		delta = waypoint.origin - newWaypoint.origin;
-		connectOrigin = scripts\ai\movement::simulateStep(newWaypoint.origin, delta);
+		connectOrigin = scripts\ai\movement::simulateMovement(newWaypoint.origin, delta);
 		if (distanceSquared(waypoint.origin, connectOrigin) > 1.0) {
-			if (debug) lib\debug::line3D(newWaypoint.origin, connectOrigin, (1.0, 0.2, 0.2), 16);
+			if (debug) lib\debug::line3D(newWaypoint.origin, connectOrigin, (1.0, 0.2, 0.2), 2);
 			continue;
 		};
 
-		edge = [];
-		edge[0] = waypoint;
-		edge[1] = newWaypoint;
-		self._edges List::push(edge);
-
 		newWaypoint AI_Waypoint::addChild(waypoint);
 		waypoint AI_Waypoint::addChild(newWaypoint);
-		if (debug) lib\debug::line3D(newWaypoint.origin, waypoint.origin, (0.2, 1.0, 0.2), 16);
+		if (debug) lib\debug::line3D(newWaypoint.origin, waypoint.origin, (0.2, 1.0, 0.2), 2);
 	}
 
 	return true;
@@ -113,11 +112,11 @@ _getChunk(origin) {
 	return self._chunks Map::get(hash);
 }
 
-_getSearchWaypoints(origin) {
+_getChunkWaypoints(origin, forwardChunks) {
 	centerCoords = __getChunkCoords(origin);
 	waypoints = List::New();
-	for (y =-1; y <= 1; y++) {
-		for (x =-1; x <= 1; x++) {
+	for (y = forwardChunks * -1; y <= forwardChunks; y++) {
+		for (x = forwardChunks * -1; x <= forwardChunks; x++) {
 			coords = (centerCoords[0] + x, centerCoords[1] + y, 0);
 			hash = __getChunkHash(coords);
 			chunk = self._chunks Map::get(hash);
@@ -129,7 +128,7 @@ _getSearchWaypoints(origin) {
 }
 
 __getChunkCoords(origin) {
-	chunkSize = MAX_DISTANCE;
+	chunkSize = MAX_CONNECT_DISTANCE;
 	return (int(origin[0] / chunkSize), int(origin[1] / chunkSize), 0);
 }
 

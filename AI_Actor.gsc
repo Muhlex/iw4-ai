@@ -18,7 +18,7 @@ kill() {
 handleMovement(movementVec) {
 	if (lengthSquared(movementVec) == 0) return;
 
-	self.origin = scripts\ai\movement::simulateStep(self.origin, movementVec * MOVE_SPEED);
+	self.origin = scripts\ai\movement::simulateMovement(self.origin, movementVec * MOVE_SPEED);
 }
 
 _think() {

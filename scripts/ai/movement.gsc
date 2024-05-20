@@ -1,31 +1,34 @@
-STEP_HEIGHT = 24;
+STEP_LENGTH = 16;
+STEP_HEIGHT = 20;
 MAX_INCLINE = 0.8;
 
-simulateStep(from, movement) {
+simulateMovement(origin, movement) {
 	speed = length(movement);
 	normalizedMovement = movement / speed;
-	to = from;
+	fullSteps = int(speed / STEP_LENGTH);
 
-	for (currentSpeed = speed; currentSpeed > 0.1; currentSpeed -= speed / 4) {
-		targetOrigin = getStepOrigin(from, normalizedMovement * currentSpeed, STEP_HEIGHT);
-		if (from[2] - targetOrigin[2] > STEP_HEIGHT) continue; // no falling
-		stepIncline = getIncline(from, targetOrigin);
-		if (abs(stepIncline) > MAX_INCLINE) {
-			targetIncline = getIncline(
-				targetOrigin,
-				getStepOrigin(targetOrigin, normalizedMovement * 4.0, 4.0)
-			);
-			if (abs(targetIncline) > MAX_INCLINE) continue; // no steep ledges
-		}
-		to = targetOrigin;
-		break;
+	for (i = 0; i < fullSteps; i++) {
+		stepOrigin = simulateStep(origin, normalizedMovement, STEP_LENGTH);
+		if (stepOrigin == origin) return origin;
+		origin = stepOrigin;
 	}
-	return to;
+	return simulateStep(origin, normalizedMovement, speed - fullSteps * STEP_LENGTH);
 }
 
-getStepOrigin(from, velocity, stepHeight) {
+simulateStep(origin, normalizedMovement, length) {
+	targetOrigin = getStepOrigin(origin, normalizedMovement * length, STEP_HEIGHT, 2.0);
+	if (origin[2] - targetOrigin[2] > STEP_HEIGHT) return origin; // no falling
+	targetIncline = getIncline(
+		targetOrigin,
+		getStepOrigin(targetOrigin, normalizedMovement * 4.0, 4.0, 4.0)
+	);
+	if (abs(targetIncline) > MAX_INCLINE) return origin; // no steep ledges
+	return targetOrigin;
+}
+
+getStepOrigin(from, velocity, stepHeight, minStepHeight) {
 	forward = undefined;
-	for (currentHeight = stepHeight; currentHeight > 2.0; currentHeight /= 2) {
+	for (currentHeight = stepHeight; currentHeight >= minStepHeight; currentHeight /= 2) {
 		up = playerPhysicsTrace(from, from + (0, 0, currentHeight));
 		forwardTarget = up + velocity;
 		forward = playerPhysicsTrace(up, forwardTarget);

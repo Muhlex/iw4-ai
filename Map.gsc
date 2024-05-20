@@ -29,6 +29,12 @@ size() {
 	return self.array.size;
 }
 
+keys() {
+	struct = spawnStruct();
+	struct.array = getArrayKeys(self.array);
+	return List::New(struct);
+}
+
 toArray() {
 	return self.array;
 }

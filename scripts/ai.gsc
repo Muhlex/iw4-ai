@@ -110,7 +110,7 @@ OnPlayerDrawNavmesh() {
 	self endon ("-debug 4");
 
 	for (;;) {
-		level.navmesh AI_Navmesh::draw();
+		level.navmesh AI_Navmesh::draw(self.origin, 4);
 		wait 0.05;
 	}
 }

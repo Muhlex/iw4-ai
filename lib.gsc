@@ -5,15 +5,15 @@ ternary(condition, truthy, falsy) {
 		return falsy;
 }
 
-coalesce(v1, v2, v3, v4, v5, v6, v7, v8) {
-	if (isDefined(v1)) return v1;
-	if (isDefined(v2)) return v2;
-	if (isDefined(v3)) return v3;
-	if (isDefined(v4)) return v4;
-	if (isDefined(v5)) return v5;
-	if (isDefined(v6)) return v6;
-	if (isDefined(v7)) return v7;
-	if (isDefined(v8)) return v8;
+coalesce(a, b, c, d, e, f, g, h) {
+	if (isDefined(a)) return a;
+	if (isDefined(b)) return b;
+	if (isDefined(c)) return c;
+	if (isDefined(d)) return d;
+	if (isDefined(e)) return e;
+	if (isDefined(f)) return f;
+	if (isDefined(g)) return g;
+	if (isDefined(h)) return h;
 	return undefined;
 }
 

@@ -1,7 +1,7 @@
-New() {
-	list = spawnStruct();
+New(struct) {
+	list = lib::coalesce(struct, spawnStruct());
 	list._classname = "List";
-	list.array = [];
+	if (!isDefined(list.array)) list.array = [];
 	return list;
 }
 
