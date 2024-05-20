@@ -1,6 +1,6 @@
 STEP_LENGTH = 16;
-STEP_HEIGHT = 20;
-MAX_INCLINE = 0.8;
+STEP_HEIGHT = 19;
+MAX_INCLINE = 0.6;
 
 simulateMovement(origin, movement) {
 	speed = length(movement);
@@ -18,11 +18,7 @@ simulateMovement(origin, movement) {
 simulateStep(origin, normalizedMovement, length) {
 	targetOrigin = getStepOrigin(origin, normalizedMovement * length, STEP_HEIGHT, 2.0);
 	if (origin[2] - targetOrigin[2] > STEP_HEIGHT) return origin; // no falling
-	targetIncline = getIncline(
-		targetOrigin,
-		getStepOrigin(targetOrigin, normalizedMovement * 4.0, 4.0, 4.0)
-	);
-	if (abs(targetIncline) > MAX_INCLINE) return origin; // no steep ledges
+	if (abs(getIncline(targetOrigin)) > MAX_INCLINE) return origin; // no steep ledges
 	return targetOrigin;
 }
 
@@ -38,6 +34,12 @@ getStepOrigin(from, velocity, stepHeight, minStepHeight) {
 	return ground;
 }
 
-getIncline(from, to) {
-	return vectorDot(vectorNormalize(to - from), (0, 0, 1));
+getIncline(at) {
+	trace = bulletTrace(at, at + (0, 0, -4096), false, undefined);
+	if (trace["surfacetype"] == "water") {
+		pos = trace["position"];
+		trace = bulletTrace(pos + (0, 0, -0.0001), pos + (0, 0, -4096), false, undefined);
+	}
+	if (trace["fraction"] * 4096 > 64.0) return 0.0;
+	return 1.0 - vectorDot(trace["normal"], (0, 0, 1));
 }
