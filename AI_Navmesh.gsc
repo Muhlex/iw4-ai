@@ -11,9 +11,14 @@ MAX_CONNECT_DISTANCE = RESOLUTION + MIN_WAYPOINT_DISTANCE;
 
 New() {
 	mesh = spawnStruct();
+	mesh._waypoints = List::New();
 	mesh._chunks = Map::New();
 	mesh.length = 0;
 	return mesh;
+}
+
+getWaypoint(index) {
+	return self._waypoints List::at(index);
 }
 
 generate(startOrigins) {
@@ -33,8 +38,8 @@ generate(startOrigins) {
 	while (queue Queue::size() > 0) {
 		origin = queue Queue::dequeue();
 		waypoint = AI_Waypoint::New(self.length, origin);
-		valid = self AI_Navmesh::_addWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq);
-		if (!valid) continue;
+		success = self AI_Navmesh::_tryAddWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq);
+		if (!success) continue;
 
 		for (angle = 0; angle < 360; angle += 90) {
 			movement = anglesToForward((0, angle, 0)) * RESOLUTION;
@@ -52,22 +57,78 @@ generate(startOrigins) {
 	iPrintLnBold("Generated ", self.length - previousLength, " nodes.");
 }
 
+findPath(start, goal) {
+	openSet = Set::New();
+	openSet Set::add(start.index);
+
+	gScores = Map::New();
+	gScores Map::set(start.index, 0);
+
+	fScores = Map::New();
+	fScores Map::set(start.index, distance(start.origin, goal.origin));
+
+	parents = Map::New();
+
+	while (openSet Set::size() > 0) {
+		// This operation can occur in O(Log(N)) time if openSet is a min-heap or a priority queue
+		// TODO: Different data structure than Set?
+		currentIndex = undefined;
+		lowestFScore = undefined;
+		foreach (index in openSet.array) {
+			fScore = fScores Map::get(index);
+			if (isDefined(lowestFScore) && fScore >= lowestFScore) continue;
+
+			currentIndex = index;
+			lowestFScore = fScore;
+		}
+
+		current = self AI_Navmesh::getWaypoint(currentIndex);
+
+		if (current == goal) {
+			path = List::New();
+			while (isDefined(current)) {
+				path List::push(current);
+				current = parents Map::get(current.index);
+			}
+			return path;
+		}
+
+		openSet Set::remove(current.index);
+		foreach (child in current.children.array) {
+			childDist = distance(current.origin, child.origin);
+			childGScore = gScores Map::get(child.index);
+			tentativeGScore = gScores Map::get(current.index) + childDist;
+			if (isDefined(childGScore) && tentativeGScore >= childGScore) continue;
+
+			parents Map::set(child.index, current);
+			gScores Map::set(child.index, tentativeGScore);
+			fScores Map::set(child.index, tentativeGScore + distance(child.origin, goal.origin));
+			openSet Set::add(child.index);
+		}
+	}
+
+	return undefined;
+}
+
 draw(origin, chunkRange) {
 	waypoints = self _getChunkWaypoints(origin, chunkRange);
-	drawnIds = Set::New();
+	drawnWaypointIndices = Set::New();
+
 	foreach (waypoint in waypoints.array) {
 		if (waypoint.children List::size() == 0)
-			lib\debug::line3D(waypoint.origin, waypoint.origin + (0, 0, 16), (1, 1, 1));
-		foreach (childId in waypoint.children Map::keys().array) {
-			if (drawnIds Set::has(childId)) continue;
-			childWaypoint = waypoint.children Map::get(childId);
+			lib\debug::line3D(waypoint.origin, waypoint.origin + (0, 0, 8), (1, 1, 1));
+
+		foreach (childIndex in waypoint.children Map::keys().array) {
+			if (drawnWaypointIndices Set::has(childIndex)) continue;
+			childWaypoint = waypoint.children Map::get(childIndex);
 			lib\debug::line3D(waypoint.origin, childWaypoint.origin, (0, 0.85, 1));
 		}
-		drawnIds Set::add(waypoint.id);
+
+		drawnWaypointIndices Set::add(waypoint.index);
 	}
 }
 
-_addWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
+_tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
 	waypointsInRange = List::New();
 	searchWaypoints = self AI_Navmesh::_getChunkWaypoints(newWaypoint.origin, 1);
 
@@ -81,6 +142,7 @@ _addWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
 
 	// Add to navmesh:
 	self.length++;
+	self._waypoints List::push(newWaypoint);
 	self AI_Navmesh::_getChunk(newWaypoint.origin) List::push(newWaypoint);
 
 	debug = getDvarInt("ai_navmesh_debug") != 0;

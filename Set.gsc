@@ -3,26 +3,26 @@
 New() {
 	set = spawnStruct();
 	set._classname = "Set";
-	set._array = [];
+	set.array = [];
 	return set;
 }
 
 has(value) {
-	return isDefined(self._array[value]);
+	return isDefined(self.array[value]);
 }
 
 add(value) {
-	self._array[value] = true;
+	self.array[value] = value;
 }
 
 remove(value) {
-	self._array[value] = undefined;
+	self.array[value] = undefined;
 }
 
 size() {
-	return self._array.size;
+	return self.array.size;
 }
 
 toArray() {
-	return getArrayKeys(self._array);
+	return getArrayKeys(self.array);
 }

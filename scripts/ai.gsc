@@ -58,6 +58,24 @@ OnPlayerSaid() {
 				foreach (spawnPoint in spawnPoints) origins[origins.size] = spawnPoint.origin;
 				level.navmesh thread AI_Navmesh::generate(origins);
 				break;
+			case "path":
+			case "p":
+				if (level.navmesh.length == 0) {
+					iPrintLnBold("^1No waypoints available.");
+					continue;
+				}
+				start = level.navmesh AI_Navmesh::getWaypoint(0);
+				goal = level.navmesh AI_Navmesh::getWaypoint(level.navmesh.length - 1);
+				path = level.navmesh AI_Navmesh::findPath(start, goal);
+				if (!isDefined(path)) {
+					iPrintLnBold("^3No path found.");
+					continue;
+				}
+				iPrintLnBold("^2Path of length ", path List::size(), " found.");
+				for (i = 1; i < path List::size(); i++) {
+					lib\debug::line3D(path List::at(i - 1).origin, path List::at(i).origin, (0.2, 1, 0.1), 8);
+				}
+				break;
 		}
 	}
 }
