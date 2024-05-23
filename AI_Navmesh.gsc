@@ -10,11 +10,11 @@ MIN_WAYPOINT_DISTANCE = RESOLUTION / 2 * SQRT_OF_TWO;
 MAX_CONNECT_DISTANCE = RESOLUTION + MIN_WAYPOINT_DISTANCE;
 
 New() {
-	mesh = spawnStruct();
-	mesh._waypoints = List::New();
-	mesh._chunks = Map::New();
-	mesh.length = 0;
-	return mesh;
+	navmesh = spawnStruct();
+	navmesh._waypoints = List::New();
+	navmesh._chunks = Map::New();
+	navmesh.pathfinder = AI_Pathfinder::New(navmesh);
+	return navmesh;
 }
 
 getWaypoint(index) {
@@ -33,11 +33,11 @@ generate(startOrigins) {
 	}
 
 	iterations = 0;
-	previousLength = self.length;
+	previousLength = self._waypoints List::size();
 
 	while (queue Queue::size() > 0) {
 		origin = queue Queue::dequeue();
-		waypoint = AI_Waypoint::New(self.length, origin);
+		waypoint = AI_Waypoint::New(self._waypoints List::size(), origin);
 		success = self AI_Navmesh::_tryAddWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq);
 		if (!success) continue;
 
@@ -54,74 +54,26 @@ generate(startOrigins) {
 		if (getDvarInt("ai_navmesh_debug") != 0 && iterations % 16 == 0) wait 0.05;
 	}
 
-	iPrintLnBold("Generated ", self.length - previousLength, " nodes.");
+	iPrintLnBold("Generated ", self._waypoints List::size() - previousLength, " nodes.");
 }
 
-findPath(start, goal) {
-	openSet = Set::New();
-	openSet Set::add(start.index);
-
-	gScores = Map::New();
-	gScores Map::set(start.index, 0);
-
-	fScores = Map::New();
-	fScores Map::set(start.index, distance(start.origin, goal.origin));
-
-	parents = Map::New();
-
-	while (openSet Set::size() > 0) {
-		// This operation can occur in O(Log(N)) time if openSet is a min-heap or a priority queue
-		// TODO: Different data structure than Set?
-		currentIndex = undefined;
-		lowestFScore = undefined;
-		foreach (index in openSet.array) {
-			fScore = fScores Map::get(index);
-			if (isDefined(lowestFScore) && fScore >= lowestFScore) continue;
-
-			currentIndex = index;
-			lowestFScore = fScore;
-		}
-
-		current = self AI_Navmesh::getWaypoint(currentIndex);
-
-		if (current == goal) {
-			path = List::New();
-			while (isDefined(current)) {
-				path List::push(current);
-				current = parents Map::get(current.index);
-			}
-			return path;
-		}
-
-		openSet Set::remove(current.index);
-		foreach (child in current.children.array) {
-			childDist = distance(current.origin, child.origin);
-			childGScore = gScores Map::get(child.index);
-			tentativeGScore = gScores Map::get(current.index) + childDist;
-			if (isDefined(childGScore) && tentativeGScore >= childGScore) continue;
-
-			parents Map::set(child.index, current);
-			gScores Map::set(child.index, tentativeGScore);
-			fScores Map::set(child.index, tentativeGScore + distance(child.origin, goal.origin));
-			openSet Set::add(child.index);
-		}
-	}
-
-	return undefined;
+size() {
+	return self._waypoints List::size();
 }
 
 draw(origin, chunkRange) {
 	waypoints = self _getChunkWaypoints(origin, chunkRange);
+	waypointsText = self _getChunkWaypoints(origin, 2);
+
+	foreach (waypoint in waypointsText.array) {
+		lib\debug::text3D(waypoint.origin + (0, 0, 2), waypoint.index, (0.2, 0.9, 1), 1, 0.75);
+	}
+
 	drawnWaypointIndices = Set::New();
-
 	foreach (waypoint in waypoints.array) {
-		if (waypoint.children List::size() == 0)
-			lib\debug::line3D(waypoint.origin, waypoint.origin + (0, 0, 8), (1, 1, 1));
-
-		foreach (childIndex in waypoint.children Map::keys().array) {
-			if (drawnWaypointIndices Set::has(childIndex)) continue;
-			childWaypoint = waypoint.children Map::get(childIndex);
-			lib\debug::line3D(waypoint.origin, childWaypoint.origin, (0, 0.85, 1));
+		foreach (child in waypoint.children.array) {
+			if (drawnWaypointIndices Set::has(child.index)) continue;
+			lib\debug::line3D(waypoint.origin, child.origin, (0, 0.85, 1));
 		}
 
 		drawnWaypointIndices Set::add(waypoint.index);
@@ -141,7 +93,6 @@ _tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
 	}
 
 	// Add to navmesh:
-	self.length++;
 	self._waypoints List::push(newWaypoint);
 	self AI_Navmesh::_getChunk(newWaypoint.origin) List::push(newWaypoint);
 
@@ -165,7 +116,7 @@ _tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
 }
 
 _getChunk(origin) {
-	hash = __getChunkHash(__getChunkCoords(origin));
+	hash = _GetChunkHash(_GetChunkCoords(origin));
 	if (!self._chunks Map::has(hash)) {
 		chunk = List::New();
 		self._chunks Map::set(hash, chunk);
@@ -175,12 +126,12 @@ _getChunk(origin) {
 }
 
 _getChunkWaypoints(origin, forwardChunks) {
-	centerCoords = __getChunkCoords(origin);
+	centerCoords = _GetChunkCoords(origin);
 	waypoints = List::New();
 	for (y = forwardChunks * -1; y <= forwardChunks; y++) {
 		for (x = forwardChunks * -1; x <= forwardChunks; x++) {
 			coords = (centerCoords[0] + x, centerCoords[1] + y, 0);
-			hash = __getChunkHash(coords);
+			hash = _GetChunkHash(coords);
 			chunk = self._chunks Map::get(hash);
 			if (!isDefined(chunk)) continue;
 			waypoints List::append(chunk);
@@ -189,11 +140,11 @@ _getChunkWaypoints(origin, forwardChunks) {
 	return waypoints;
 }
 
-__getChunkCoords(origin) {
+_GetChunkCoords(origin) {
 	chunkSize = MAX_CONNECT_DISTANCE;
 	return (int(origin[0] / chunkSize), int(origin[1] / chunkSize), 0);
 }
 
-__getChunkHash(coords) {
+_GetChunkHash(coords) {
 	return coords[0] + " " + coords[1];
 }

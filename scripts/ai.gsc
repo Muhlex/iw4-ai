@@ -1,8 +1,13 @@
 init() {
 	level.ais = [];
 	level.navmesh = AI_Navmesh::New();
+	level.heap = Heap::New(::compare);
 
 	level thread OnPlayerConnect();
+}
+
+compare(a, b, args) {
+	return a < b;
 }
 
 OnPlayerConnect() {
@@ -18,7 +23,9 @@ OnPlayerSaid() {
 	for (;;) {
 		level waittill ("say", text, player);
 
-		switch (text) {
+		args = strTok(text, " ");
+
+		switch (args[0]) {
 			case "spawn":
 			case "s":
 				level.ais[level.ais.size] = AI_Actor::Spawn(player.origin);
@@ -60,21 +67,41 @@ OnPlayerSaid() {
 				break;
 			case "path":
 			case "p":
-				if (level.navmesh.length == 0) {
+				if (!isDefined(args[2])) {
+					iPrintLnBold("^1No 2 waypoints specified.");
+					continue;
+				}
+				if (level.navmesh AI_Navmesh::size() == 0) {
 					iPrintLnBold("^1No waypoints available.");
 					continue;
 				}
-				start = level.navmesh AI_Navmesh::getWaypoint(0);
-				goal = level.navmesh AI_Navmesh::getWaypoint(level.navmesh.length - 1);
-				path = level.navmesh AI_Navmesh::findPath(start, goal);
+				startIndex = int(args[1]);
+				goalIndex = int(args[2]);
+				start = level.navmesh AI_Navmesh::getWaypoint(startIndex);
+				goal = level.navmesh AI_Navmesh::getWaypoint(goalIndex);
+				path = level.navmesh.pathfinder AI_Pathfinder::find(start, goal);
 				if (!isDefined(path)) {
 					iPrintLnBold("^3No path found.");
 					continue;
 				}
-				iPrintLnBold("^2Path of length ", path List::size(), " found.");
+				iPrintLnBold("^2Path of length ^7", path List::size(), " ^2found.");
 				for (i = 1; i < path List::size(); i++) {
-					lib\debug::line3D(path List::at(i - 1).origin, path List::at(i).origin, (0.2, 1, 0.1), 8);
+					lib\debug::line3D(path List::at(i - 1).origin, path List::at(i).origin, (0.2, 1, 0.1), 20);
 				}
+				break;
+			case "heapadd":
+			case "ha":
+				value = int(args[1]);
+				level.heap Heap::add(value);
+				iPrintLnBold("Added ", value);
+				iPrintLn("Heap Array: ", lib::toString(level.heap.array));
+				break;
+			case "heappop":
+			case "hp":
+				value = level.heap Heap::pop();
+				if (!isDefined(value)) iPrintLnBold("-- Heap empty --");
+				else iPrintLnBold(value);
+				iPrintLn("Heap Array: ", lib::toString(level.heap.array));
 				break;
 		}
 	}
