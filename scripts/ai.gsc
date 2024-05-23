@@ -65,6 +65,15 @@ OnPlayerSaid() {
 				foreach (spawnPoint in spawnPoints) origins[origins.size] = spawnPoint.origin;
 				level.navmesh thread AI_Navmesh::generate(origins);
 				break;
+			case "teleport":
+			case "tp":
+				if (!isDefined(args[1])) {
+					iPrintLnBold("^1No waypoint specified.");
+					continue;
+				}
+				index = int(args[1]);
+				player setOrigin(level.navmesh AI_Navmesh::getWaypoint(index).origin);
+				break;
 			case "path":
 			case "p":
 				if (!isDefined(args[2])) {

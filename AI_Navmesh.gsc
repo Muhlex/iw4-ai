@@ -1,5 +1,3 @@
-#include lib;
-
 // GSC function stack size (for a recursive algorithm) is 32...
 
 PLAYER_CAPSULE_HEIGHT = 72;
@@ -22,6 +20,9 @@ getWaypoint(index) {
 }
 
 generate(startOrigins) {
+	startTime = getSystemMilliseconds();
+	lib\perf::start("generate");
+
 	resolutionSq = squared(RESOLUTION);
 	minWaypointDistSq = squared(MIN_WAYPOINT_DISTANCE);
 	maxConnectDistSq = squared(MAX_CONNECT_DISTANCE);
@@ -51,10 +52,11 @@ generate(startOrigins) {
 		}
 
 		iterations++;
-		if (getDvarInt("ai_navmesh_debug") != 0 && iterations % 16 == 0) wait 0.05;
+		if (getDvarInt("ai_navmesh_debug") != 0 && iterations % 64 == 0) wait 0.05;
 	}
 
 	iPrintLnBold("Generated ", self._waypoints List::size() - previousLength, " nodes.");
+	iPrintLn("Navmesh generation took ^3", lib\perf::end("generate"), " ms^7.");
 }
 
 size() {
@@ -63,7 +65,7 @@ size() {
 
 draw(origin, chunkRange) {
 	waypoints = self _getChunkWaypoints(origin, chunkRange);
-	waypointsText = self _getChunkWaypoints(origin, 2);
+	waypointsText = self _getChunkWaypoints(origin, int(chunkRange / 2));
 
 	foreach (waypoint in waypointsText.array) {
 		lib\debug::text3D(waypoint.origin + (0, 0, 2), waypoint.index, (0.2, 0.9, 1), 1, 0.75);
@@ -97,6 +99,7 @@ _tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
 	self AI_Navmesh::_getChunk(newWaypoint.origin) List::push(newWaypoint);
 
 	debug = getDvarInt("ai_navmesh_debug") != 0;
+	debug = false;
 
 	// Connect to reachable waypoints:
 	foreach (waypoint in waypointsInRange.array) {

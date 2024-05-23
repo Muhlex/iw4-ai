@@ -16,11 +16,13 @@ _Heuristic(waypointA, waypointB) {
 	return distance(waypointA.origin, waypointB.origin);
 }
 
-_Distance(waypointA, waypointB) {
+_Cost(waypointA, waypointB) {
 	return distance(waypointA.origin, waypointB.origin);
 }
 
 find(start, goal) {
+	lib\perf::start("pathfind");
+
 	openList = self._openList;
 	openList Heap::clear();
 	openList Heap::add(start);
@@ -43,11 +45,12 @@ find(start, goal) {
 				path List::push(current);
 				current = parents Map::get(current.index);
 			}
+			iPrintLn("Pathfinding took ^3", lib\perf::end("pathfind"), " ms^7.");
 			return path;
 		}
 
 		foreach (child in current.children.array) {
-			tentativeGCost = gCosts Map::get(current.index) + _Distance(current, child);
+			tentativeGCost = gCosts Map::get(current.index) + _Cost(current, child);
 			childGCost = gCosts Map::get(child.index);
 			childHasGCost = isDefined(childGCost);
 			if (childHasGCost && tentativeGCost >= childGCost) continue;
@@ -62,5 +65,6 @@ find(start, goal) {
 		}
 	}
 
+	iPrintLn("Pathfinding took ^3", lib\perf::end("pathfind"), " ms^7.");
 	return undefined;
 }
