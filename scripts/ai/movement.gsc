@@ -4,6 +4,8 @@ MAX_INCLINE = 0.6;
 
 simulateMovement(origin, movement) {
 	speed = length(movement);
+	if (speed == 0) return origin;
+
 	normalizedMovement = movement / speed;
 	fullSteps = int(speed / STEP_LENGTH);
 

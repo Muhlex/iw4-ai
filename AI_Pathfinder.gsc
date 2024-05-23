@@ -12,11 +12,11 @@ _OpenListCompare(waypointA, waypointB, fCosts) {
 	return aCost < bCost;
 }
 
-_Heuristic(waypointA, waypointB) {
+_GetHeuristic(waypointA, waypointB) {
 	return distance(waypointA.origin, waypointB.origin);
 }
 
-_Cost(waypointA, waypointB) {
+_GetCost(waypointA, waypointB) {
 	return distance(waypointA.origin, waypointB.origin);
 }
 
@@ -25,12 +25,12 @@ find(start, goal) {
 
 	openList = self._openList;
 	openList Heap::clear();
-	openList Heap::add(start);
+	openList Heap::add(goal); // Search backwards so reversing the path is not necessary.
 
 	gCosts = Map::New();
-	gCosts Map::set(start.index, 0);
+	gCosts Map::set(goal.index, 0);
 	self._fCosts Map::clear();
-	self._fCosts Map::set(start.index, _Heuristic(start, goal));
+	self._fCosts Map::set(goal.index, _GetHeuristic(goal, start));
 
 	parents = Map::New();
 
@@ -39,7 +39,7 @@ find(start, goal) {
 		iterations++;
 		current = openList Heap::pop();
 
-		if (current == goal) {
+		if (current == start) {
 			path = List::New();
 			while (isDefined(current)) {
 				path List::push(current);
@@ -50,7 +50,7 @@ find(start, goal) {
 		}
 
 		foreach (child in current.children.array) {
-			tentativeGCost = gCosts Map::get(current.index) + _Cost(current, child);
+			tentativeGCost = gCosts Map::get(current.index) + _GetCost(current, child);
 			childGCost = gCosts Map::get(child.index);
 			childHasGCost = isDefined(childGCost);
 			if (childHasGCost && tentativeGCost >= childGCost) continue;
@@ -58,7 +58,7 @@ find(start, goal) {
 			childInOpenList = childHasGCost;
 			parents Map::set(child.index, current);
 			gCosts Map::set(child.index, tentativeGCost);
-			self._fCosts Map::set(child.index, tentativeGCost + _Heuristic(child, goal));
+			self._fCosts Map::set(child.index, tentativeGCost + _GetHeuristic(child, start));
 
 			if (childInOpenList) continue;
 			openList Heap::add(child);

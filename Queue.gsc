@@ -12,19 +12,23 @@ enqueue(value) {
 	entry.value = value;
 	entry.next = undefined;
 
-	if (!isDefined(self._first)) self._first = entry;
+	if (self._size == 0) self._first = entry;
 	else self._last.next = entry;
 	self._last = entry;
 	self._size++;
 }
 
 dequeue() {
-	entry = self._first;
-	if (!isDefined(entry)) return undefined;
+	if (self._size == 0) return undefined;
 
+	entry = self._first;
 	if (isDefined(entry.next)) self._first = entry.next;
 	self._size--;
 	return entry.value;
+}
+
+clear() {
+	self._size = 0;
 }
 
 size() {

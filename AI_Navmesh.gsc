@@ -43,6 +43,9 @@ generate(startOrigins) {
 		if (!success) continue;
 
 		for (angle = 0; angle < 360; angle += 90) {
+			iterations++;
+			if (iterations % 4096 == 0) wait 0.05;
+
 			movement = anglesToForward((0, angle, 0)) * RESOLUTION;
 			movedOrigin = scripts\ai\movement::simulateMovement(origin, movement);
 
@@ -50,9 +53,6 @@ generate(startOrigins) {
 
 			queue Queue::enqueue(movedOrigin);
 		}
-
-		iterations++;
-		if (getDvarInt("ai_navmesh_debug") != 0 && iterations % 64 == 0) wait 0.05;
 	}
 
 	iPrintLnBold("Generated ", self._waypoints List::size() - previousLength, " nodes.");
@@ -99,7 +99,6 @@ _tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
 	self AI_Navmesh::_getChunk(newWaypoint.origin) List::push(newWaypoint);
 
 	debug = getDvarInt("ai_navmesh_debug") != 0;
-	debug = false;
 
 	// Connect to reachable waypoints:
 	foreach (waypoint in waypointsInRange.array) {

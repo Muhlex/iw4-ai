@@ -6,7 +6,11 @@ New(struct) {
 }
 
 at(index) {
-	return self.array[index];
+	if (index < 0) {
+		return self.array[self.array.size + index];
+	} else {
+		return self.array[index];
+	}
 }
 
 set(index, value) {
@@ -29,6 +33,10 @@ append(list) {
 	foreach (value in list.array) {
 		self.array[self.array.size] = value;
 	}
+}
+
+clear() {
+	self.array = [];
 }
 
 size() {
