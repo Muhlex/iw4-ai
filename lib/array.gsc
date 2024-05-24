@@ -1,14 +1,4 @@
-pack(array) {
-	packed = spawnStruct();
-	packed.value = array;
-	return packed;
-}
-
-unpack(packedArray) {
-	return packedArray.value;
-}
-
-isMap(array) {
+isDict(array) {
 	foreach (key in getArrayKeys(array))
 		if (isString(key))
 			return true;
@@ -17,17 +7,17 @@ isMap(array) {
 }
 
 toString(array) {
-	isMap = isMap(array);
-	str = lib::ternary(isMap, "{", "[");
+	isDict = isDict(array);
+	str = lib::ternary(isDict, "{", "[");
 	foreach (key, value in array) {
-		if (isMap)
+		if (isDict)
 			str += key + ": " + value + ", ";
 		else
 			str += value + ", ";
 	}
 	if (array.size > 0)
 		str = getSubStr(str, 0, str.size - 2);
-	str += lib::ternary(isMap, "}", "]");
+	str += lib::ternary(isDict, "}", "]");
 
 	return str;
 }

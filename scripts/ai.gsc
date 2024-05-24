@@ -1,4 +1,13 @@
+#include lib;
+
 init() {
+	exec("dvar_bool scr_ai_navmesh_debug 0");
+	exec("dvar_int scr_ai_navmesh_resolution 96 32 1024");
+	exec("dvar_bool scr_ai_actor_debug 0");
+	AI_Actor::_Precache();
+
+	waittillframeend;
+
 	level.ais = List::New();
 	level.navmesh = AI_Navmesh::New();
 	level.path = List::New();
@@ -26,7 +35,7 @@ OnPlayerSaid() {
 
 		args = strTok(text, " ");
 
-		switch (args[0]) {
+		switch (toLower(args[0])) {
 			case "spawn":
 			case "s":
 				ai = AI_Actor::Spawn(player.origin);
@@ -34,8 +43,19 @@ OnPlayerSaid() {
 				break;
 			case "kill":
 			case "k":
+				ai = level.ais List::pop();
+				if (!isDefined(ai)) continue;
+				ai AI_Actor::kill();
+				break;
+			case "killall":
+			case "ka":
 				foreach (ai in level.ais.array) ai AI_Actor::kill();
 				level.ais List::clear();
+				break;
+			case "models":
+			case "model":
+			case "m":
+				foreach (ai in level.ais.array) ai AI_Actor::setRandomModel();
 				break;
 			case "control":
 			case "c":
@@ -118,14 +138,14 @@ OnPlayerSaid() {
 				value = int(args[1]);
 				level.heap Heap::add(value);
 				iPrintLnBold("Added ", value);
-				iPrintLn("Heap Array: ", lib::toString(level.heap.array));
+				iPrintLn("Heap Array: ", toString(level.heap.array));
 				break;
 			case "heappop":
 			case "hp":
 				value = level.heap Heap::pop();
 				if (!isDefined(value)) iPrintLnBold("-- Heap empty --");
 				else iPrintLnBold(value);
-				iPrintLn("Heap Array: ", lib::toString(level.heap.array));
+				iPrintLn("Heap Array: ", toString(level.heap.array));
 				break;
 		}
 	}

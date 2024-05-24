@@ -1,14 +1,14 @@
+#include lib;
+
 // GSC function stack size (for a recursive algorithm) is 32...
 
 PLAYER_CAPSULE_HEIGHT = 72;
-RESOLUTION = 96;
-
-SQRT_OF_TWO = 1.4143;
-MIN_WAYPOINT_DISTANCE = RESOLUTION / 2 * SQRT_OF_TWO;
-MAX_CONNECT_DISTANCE = RESOLUTION + MIN_WAYPOINT_DISTANCE;
 
 New() {
 	navmesh = spawnStruct();
+	navmesh._resolution = getDvarInt("scr_ai_navmesh_resolution");
+	navmesh._minWaypointDist = navmesh._resolution / 2 * sqrt(2) + 0.0001;
+	navmesh._maxConnectDist = navmesh._resolution + navmesh._minWaypointDist;
 	navmesh._waypoints = List::New();
 	navmesh._chunks = Map::New();
 	navmesh.pathfinder = AI_Pathfinder::New(navmesh);
@@ -19,13 +19,16 @@ getWaypoint(index) {
 	return self._waypoints List::at(index);
 }
 
-generate(startOrigins) {
-	startTime = getSystemMilliseconds();
-	lib\perf::start("generate");
+size() {
+	return self._waypoints List::size();
+}
 
-	resolutionSq = squared(RESOLUTION);
-	minWaypointDistSq = squared(MIN_WAYPOINT_DISTANCE);
-	maxConnectDistSq = squared(MAX_CONNECT_DISTANCE);
+generate(startOrigins) {
+	lib\perf::start("generate");
+	debug = getDvarInt("scr_ai_navmesh_debug");
+
+	minWaypointDistSq = squared(self._minWaypointDist);
+	maxConnectDistSq = squared(self._maxConnectDist);
 	queue = Queue::New();
 
 	foreach (origin in startOrigins) {
@@ -37,16 +40,19 @@ generate(startOrigins) {
 	previousLength = self._waypoints List::size();
 
 	while (queue Queue::size() > 0) {
+		iterations++;
+		if (iterations % ternary(debug, 4, 256) == 0) {
+			wait 0.05;
+			waittillframeend;
+		};
+
 		origin = queue Queue::dequeue();
 		waypoint = AI_Waypoint::New(self._waypoints List::size(), origin);
-		success = self AI_Navmesh::_tryAddWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq);
+		success = self AI_Navmesh::_tryAddWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq, debug);
 		if (!success) continue;
 
 		for (angle = 0; angle < 360; angle += 90) {
-			iterations++;
-			if (iterations % 4096 == 0) wait 0.05;
-
-			movement = anglesToForward((0, angle, 0)) * RESOLUTION;
+			movement = anglesToForward((0, angle, 0)) * self._resolution;
 			movedOrigin = scripts\ai\movement::simulateMovement(origin, movement);
 
 			if (distanceSquared(origin, movedOrigin) < minWaypointDistSq) continue; // optimization
@@ -59,8 +65,37 @@ generate(startOrigins) {
 	iPrintLn("Navmesh generation took ^3", lib\perf::end("generate"), " ms^7.");
 }
 
-size() {
-	return self._waypoints List::size();
+_tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq, debug) {
+	waypointsInRange = List::New();
+	searchWaypoints = self AI_Navmesh::_getChunkWaypoints(newWaypoint.origin, 1);
+
+	// Check validity:
+	foreach (waypoint in searchWaypoints.array) {
+		distanceHorizSq = distanceSquared(waypoint.origin, newWaypoint.origin);
+		if (distanceHorizSq > maxConnectDistSq) continue;
+		if (distanceHorizSq < minWaypointDistSq) return false;
+		waypointsInRange List::push(waypoint);
+	}
+
+	// Add to navmesh:
+	self._waypoints List::push(newWaypoint);
+	self AI_Navmesh::_getChunk(newWaypoint.origin) List::push(newWaypoint);
+
+	// Connect to reachable waypoints:
+	foreach (waypoint in waypointsInRange.array) {
+		delta = waypoint.origin - newWaypoint.origin;
+		connectOrigin = scripts\ai\movement::simulateMovement(newWaypoint.origin, delta);
+		if (distanceSquared(waypoint.origin, connectOrigin) > 1.0) {
+			if (debug) lib\debug::line3D(newWaypoint.origin, connectOrigin, (1.0, 0.2, 0.2), 999999);
+			continue;
+		};
+
+		newWaypoint AI_Waypoint::addChild(waypoint);
+		waypoint AI_Waypoint::addChild(newWaypoint);
+		if (debug) lib\debug::line3D(newWaypoint.origin, waypoint.origin, (0.2, 1.0, 0.2), 999999);
+	}
+
+	return true;
 }
 
 draw(origin, chunkRange) {
@@ -82,43 +117,8 @@ draw(origin, chunkRange) {
 	}
 }
 
-_tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq) {
-	waypointsInRange = List::New();
-	searchWaypoints = self AI_Navmesh::_getChunkWaypoints(newWaypoint.origin, 1);
-
-	// Check validity:
-	foreach (waypoint in searchWaypoints.array) {
-		distanceHorizSq = distanceSquared(waypoint.origin, newWaypoint.origin);
-		if (distanceHorizSq > maxConnectDistSq) continue;
-		if (distanceHorizSq < minWaypointDistSq) return false;
-		waypointsInRange List::push(waypoint);
-	}
-
-	// Add to navmesh:
-	self._waypoints List::push(newWaypoint);
-	self AI_Navmesh::_getChunk(newWaypoint.origin) List::push(newWaypoint);
-
-	debug = getDvarInt("ai_navmesh_debug") != 0;
-
-	// Connect to reachable waypoints:
-	foreach (waypoint in waypointsInRange.array) {
-		delta = waypoint.origin - newWaypoint.origin;
-		connectOrigin = scripts\ai\movement::simulateMovement(newWaypoint.origin, delta);
-		if (distanceSquared(waypoint.origin, connectOrigin) > 1.0) {
-			if (debug) lib\debug::line3D(newWaypoint.origin, connectOrigin, (1.0, 0.2, 0.2), 2);
-			continue;
-		};
-
-		newWaypoint AI_Waypoint::addChild(waypoint);
-		waypoint AI_Waypoint::addChild(newWaypoint);
-		if (debug) lib\debug::line3D(newWaypoint.origin, waypoint.origin, (0.2, 1.0, 0.2), 2);
-	}
-
-	return true;
-}
-
 _getChunk(origin) {
-	hash = _GetChunkHash(_GetChunkCoords(origin));
+	hash = _GetChunkHash(self _getChunkCoords(origin));
 	if (!self._chunks Map::has(hash)) {
 		chunk = List::New();
 		self._chunks Map::set(hash, chunk);
@@ -128,7 +128,7 @@ _getChunk(origin) {
 }
 
 _getChunkWaypoints(origin, forwardChunks) {
-	centerCoords = _GetChunkCoords(origin);
+	centerCoords = self _getChunkCoords(origin);
 	waypoints = List::New();
 	for (y = forwardChunks * -1; y <= forwardChunks; y++) {
 		for (x = forwardChunks * -1; x <= forwardChunks; x++) {
@@ -142,8 +142,8 @@ _getChunkWaypoints(origin, forwardChunks) {
 	return waypoints;
 }
 
-_GetChunkCoords(origin) {
-	chunkSize = MAX_CONNECT_DISTANCE;
+_getChunkCoords(origin) {
+	chunkSize = self._maxConnectDist;
 	return (int(origin[0] / chunkSize), int(origin[1] / chunkSize), 0);
 }
 
