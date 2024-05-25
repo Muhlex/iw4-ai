@@ -32,6 +32,7 @@ addTarget(origin) {
 }
 
 clearTargets() {
+	self._currentTarget = undefined;
 	self._targets Queue::clear();
 }
 

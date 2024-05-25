@@ -48,7 +48,7 @@ generate(startOrigins) {
 
 		origin = queue Queue::dequeue();
 		waypoint = AI_Waypoint::New(self._waypoints List::size(), origin);
-		success = self AI_Navmesh::_tryAddWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq, debug);
+		success = self _tryAddWaypoint(waypoint, minWaypointDistSq, maxConnectDistSq, debug);
 		if (!success) continue;
 
 		for (angle = 0; angle < 360; angle += 90) {
@@ -67,32 +67,36 @@ generate(startOrigins) {
 
 _tryAddWaypoint(newWaypoint, minWaypointDistSq, maxConnectDistSq, debug) {
 	waypointsInRange = List::New();
-	searchWaypoints = self AI_Navmesh::_getChunkWaypoints(newWaypoint.origin, 1);
+	searchWaypoints = self _getChunkWaypoints(newWaypoint.origin, 1);
 
 	// Check validity:
 	foreach (waypoint in searchWaypoints.array) {
-		distanceHorizSq = distanceSquared(waypoint.origin, newWaypoint.origin);
+		distanceHorizSq = distanceSquared(
+			(waypoint.origin[0], waypoint.origin[1], 0),
+			(newWaypoint.origin[0], newWaypoint.origin[1], 0)
+		);
 		if (distanceHorizSq > maxConnectDistSq) continue;
-		if (distanceHorizSq < minWaypointDistSq) return false;
+		distanceVert = abs(waypoint.origin[2] - newWaypoint.origin[2]);
+		if (distanceHorizSq < minWaypointDistSq && distanceVert < PLAYER_CAPSULE_HEIGHT) return false;
 		waypointsInRange List::push(waypoint);
 	}
 
 	// Add to navmesh:
 	self._waypoints List::push(newWaypoint);
-	self AI_Navmesh::_getChunk(newWaypoint.origin) List::push(newWaypoint);
+	self _getChunk(newWaypoint.origin) List::push(newWaypoint);
 
 	// Connect to reachable waypoints:
 	foreach (waypoint in waypointsInRange.array) {
 		delta = waypoint.origin - newWaypoint.origin;
 		connectOrigin = scripts\ai\movement::simulateMovement(newWaypoint.origin, delta);
 		if (distanceSquared(waypoint.origin, connectOrigin) > 1.0) {
-			if (debug) lib\debug::line3D(newWaypoint.origin, connectOrigin, (1.0, 0.2, 0.2), 999999);
+			if (debug) lib\debug::line3D(newWaypoint.origin, connectOrigin, (1.0, 0.2, 0.2), 4);
 			continue;
 		};
 
 		newWaypoint AI_Waypoint::addChild(waypoint);
 		waypoint AI_Waypoint::addChild(newWaypoint);
-		if (debug) lib\debug::line3D(newWaypoint.origin, waypoint.origin, (0.2, 1.0, 0.2), 999999);
+		if (debug) lib\debug::line3D(newWaypoint.origin, waypoint.origin, (0.2, 1.0, 0.2), 4);
 	}
 
 	return true;

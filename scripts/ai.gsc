@@ -1,12 +1,10 @@
 #include lib;
 
 init() {
-	exec("dvar_bool scr_ai_navmesh_debug 0");
-	exec("dvar_int scr_ai_navmesh_resolution 96 32 1024");
-	exec("dvar_bool scr_ai_actor_debug 0");
+	lib\dvar::initBool("scr_ai_navmesh_debug", false);
+	lib\dvar::initInt("scr_ai_navmesh_resolution", 96, 32, 1024);
+	lib\dvar::initBool("scr_ai_actor_debug", false);
 	AI_Actor::_Precache();
-
-	waittillframeend;
 
 	level.ais = List::New();
 	level.navmesh = AI_Navmesh::New();
@@ -92,7 +90,9 @@ OnPlayerSaid() {
 			case "generate":
 			case "g":
 				origins = [];
-				origins[0] = player.origin;
+				start = player getEye();
+				end = start + anglesToForward(player getPlayerAngles()) * 32768;
+				origins[0] = bulletTrace(start, end, false, undefined)["position"];
 				level.navmesh thread AI_Navmesh::generate(origins);
 				break;
 			case "generatespawns":
@@ -216,7 +216,7 @@ OnPlayerDrawNavmesh() {
 	self endon ("-debug 4");
 
 	for (;;) {
-		level.navmesh AI_Navmesh::draw(self.origin, 4);
+		level.navmesh AI_Navmesh::draw(self.origin, 3);
 		wait 0.05;
 	}
 }
