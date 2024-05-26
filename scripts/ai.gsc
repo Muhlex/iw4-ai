@@ -1,9 +1,10 @@
 #include lib;
 
 init() {
+	lib\dvar::initBool("scr_ai_actor_debug", false);
 	lib\dvar::initBool("scr_ai_navmesh_debug", false);
 	lib\dvar::initInt("scr_ai_navmesh_resolution", 96, 32, 1024);
-	lib\dvar::initBool("scr_ai_actor_debug", false);
+	lib\dvar::initBool("scr_ai_pathfinder_debug", false);
 	AI_Actor::_Precache();
 
 	level.ais = List::New();
@@ -232,8 +233,8 @@ OnPlayerDrawPath() {
 		if (size > 0) {
 			start = path List::at(0);
 			goal = path List::at(-1);
-			lib\debug::text3D(start.origin + (0, 0, 2), "| START", (1.0, 0.2, 0.2), 1, 2.0);
-			lib\debug::text3D(goal.origin + (0, 0, 2), "| GOAL", (0.2, 1.0, 0.2), 1, 2.0);
+			lib\debug::text3D(start.origin + (0, 0, 2), "| START", (1.0, 0.2, 0.2), 1, 4.0);
+			lib\debug::text3D(goal.origin + (0, 0, 2), "| GOAL", (0.2, 1.0, 0.2), 1, 4.0);
 			for (i = 1; i < path List::size(); i++) {
 				lib\debug::line3D(
 					path List::at(i - 1).origin + (0, 0, 1),

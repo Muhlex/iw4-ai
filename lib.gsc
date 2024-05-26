@@ -20,6 +20,6 @@ coalesce(a, b, c, d, e, f, g, h) {
 toString(var) {
 	if (!isDefined(var)) return "undefined";
 	else if (isString(var)) return "^7\"" + var + "^7\"";
-	else if (isArray(var)) return lib\Array::toString(var);
+	else if (isArray(var)) return lib\array::toString(var);
 	else return "" + var;
 }

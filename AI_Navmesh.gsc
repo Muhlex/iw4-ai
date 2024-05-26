@@ -24,8 +24,8 @@ size() {
 }
 
 generate(startOrigins) {
-	lib\perf::start("generate");
 	debug = getDvarInt("scr_ai_navmesh_debug");
+	lib\perf::start("generate");
 
 	minWaypointDistSq = squared(self._minWaypointDist);
 	maxConnectDistSq = squared(self._maxConnectDist);

@@ -12,7 +12,8 @@ _OpenListCompare(waypointA, waypointB, fCosts) {
 	return aCost < bCost;
 }
 
-_GetHeuristic(waypointA, waypointB) {
+_GetHeuristic(waypointA, waypointB, debug) {
+	if (debug) lib\debug::line3D(waypointA.origin, waypointB.origin, (1.00, 1.00, 1.00), 0.5);
 	return distance(waypointA.origin, waypointB.origin);
 }
 
@@ -21,23 +22,33 @@ _GetCost(waypointA, waypointB) {
 }
 
 find(start, goal) {
+	debug = getDvarInt("scr_ai_pathfinder_debug");
 	lib\perf::start("pathfind");
 
-	openList = self._openList;
-	openList Heap::clear();
-	openList Heap::add(goal); // Search backwards so reversing the path is not necessary.
+	openSet = Set::New();
+	openSet Set::add(goal.index);
 
 	gCosts = Map::New();
 	gCosts Map::set(goal.index, 0);
 	self._fCosts Map::clear();
-	self._fCosts Map::set(goal.index, _GetHeuristic(goal, start));
+	self._fCosts Map::set(goal.index, _GetHeuristic(goal, start, debug));
 
 	parents = Map::New();
 
 	iterations = 0;
-	while (openList Heap::size() > 0) {
+	while (openSet Set::size() > 0) {
 		iterations++;
-		current = openList Heap::pop();
+		currentIndex = undefined;
+		lowestFScore = undefined;
+		foreach (index in openSet.array) {
+			fScore = self._fCosts Map::get(index);
+			if (isDefined(lowestFScore) && fScore >= lowestFScore) continue;
+
+			currentIndex = index;
+			lowestFScore = fScore;
+		}
+		openSet Set::remove(currentIndex);
+		current = self._navmesh AI_Navmesh::getWaypoint(currentIndex);
 
 		if (current == start) {
 			path = List::New();
@@ -55,13 +66,18 @@ find(start, goal) {
 			childHasGCost = isDefined(childGCost);
 			if (childHasGCost && tentativeGCost >= childGCost) continue;
 
+			if (debug) {
+				lib\debug::line3D(current.origin, child.origin, (0.32, 1.00, 0.00), 60);
+				wait 0.05;
+			}
+
 			childInOpenList = childHasGCost;
 			parents Map::set(child.index, current);
 			gCosts Map::set(child.index, tentativeGCost);
-			self._fCosts Map::set(child.index, tentativeGCost + _GetHeuristic(child, start));
+			self._fCosts Map::set(child.index, tentativeGCost + _GetHeuristic(child, start, debug));
 
 			if (childInOpenList) continue;
-			openList Heap::add(child);
+			openSet Set::add(child.index);
 		}
 	}
 
